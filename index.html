@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rockland Tycoon – A Rockland County Property Game</title>
+<style>
+:root{
+  --bs: min(96vw, 88vh, 780px);
+  --tile: calc(var(--bs) / 11);
+  --ink:#1f2a2e; --river:#0f5e6e; --river2:#137a8c; --board:#eef4ea; --paper:#fbfaf5;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(160deg,#cfe3df,#e7efe2);color:var(--ink);min-height:100vh}
+.app{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:flex-start;padding:10px}
+#board{width:var(--bs);height:var(--bs);display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);background:var(--ink);gap:1px;border:3px solid var(--ink);border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.25);flex:0 0 auto}
+.tile{background:var(--board);position:relative;display:flex;overflow:hidden;cursor:pointer;font-size:max(6px,calc(var(--tile)*0.15));line-height:1.08;text-align:center}
+.tile:hover{filter:brightness(.96)}
+.side-b{flex-direction:column}.side-t{flex-direction:column-reverse}.side-l{flex-direction:row-reverse}.side-r{flex-direction:row}
+.bar{flex:0 0 24%;display:flex;align-items:center;justify-content:center;font-size:.95em;color:#fff;font-weight:700;border:0 solid var(--ink)}
+.side-b .bar{border-bottom-width:1px}.side-t .bar{border-top-width:1px}.side-l .bar{border-left-width:1px}.side-r .bar{border-right-width:1px}
+.tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1px;min-width:0;min-height:0;gap:1px}
+.tb .name{font-weight:650;overflow-wrap:anywhere}
+.tb .icon{font-size:1.6em;line-height:1}
+.tb .price{opacity:.7;font-size:.92em}
+.corner .tb .icon{font-size:2.6em}
+.corner .tb .name{font-size:1.05em}
+.mort .tb{opacity:.45;background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.08) 4px 8px)}
+.tokens{position:absolute;left:0;right:0;bottom:1px;display:flex;flex-wrap:wrap;justify-content:center;gap:1px;pointer-events:none}
+.tok{width:calc(var(--tile)*0.4);height:calc(var(--tile)*0.4);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--tile)*0.24);background:#fff;border:2px solid;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.pulse{animation:pulse 1s ease-out}
+@keyframes pulse{0%{box-shadow:inset 0 0 0 4px #facc15}100%{box-shadow:inset 0 0 0 0 transparent}}
+#center{grid-row:2/11;grid-column:2/11;background:radial-gradient(circle at 50% 35%,#fdfcf6 0%,#eef4ea 55%,#d6e9e4 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--bs)*0.012);padding:calc(var(--bs)*0.02);text-align:center;overflow:auto}
+.title{font-weight:900;letter-spacing:.06em;color:var(--river);font-size:calc(var(--bs)*0.058);line-height:.95;text-shadow:2px 2px 0 #fff}
+.sub{font-size:max(10px,calc(var(--bs)*0.02));opacity:.7;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+.dice{font-size:calc(var(--bs)*0.075);line-height:1;letter-spacing:.08em}
+.turn{font-weight:700;font-size:max(12px,calc(var(--bs)*0.025))}
+.msg{font-size:max(11px,calc(var(--bs)*0.021));max-width:92%}
+.card{background:#fff;border:2px solid var(--river);border-radius:8px;padding:.4em .7em;font-size:max(11px,calc(var(--bs)*0.019));max-width:88%;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.card b{color:var(--river);display:block;font-size:.85em;text-transform:uppercase;letter-spacing:.08em}
+.actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.btn{font:inherit;font-size:clamp(12px,calc(var(--bs)*0.022),16px);padding:.5em .95em;border-radius:8px;border:2px solid var(--river);background:var(--river);color:#fff;font-weight:650;cursor:pointer}
+.btn:hover{background:var(--river2)}
+.btn.alt{background:#fff;color:var(--river)}
+.btn.warn{background:#b42318;border-color:#b42318}
+.btn.small{font-size:12px;padding:.3em .6em}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.side{width:min(96vw,360px);display:flex;flex-direction:column;gap:10px}
+.panel{background:var(--paper);border-radius:10px;padding:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.panel h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.1em;color:var(--river)}
+.pcard{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;cursor:pointer;border:2px solid transparent}
+.pcard.active{border-color:var(--river);background:#fff}
+.pcard.out{opacity:.4;text-decoration:line-through}
+.pcard .tk{font-size:22px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid}
+.pcard .info{flex:1;font-size:13px}
+.pcard .money{font-weight:800;font-size:15px}
+.swatches{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.sw{width:10px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.3)}
+#log{max-height:220px;overflow:auto;font-size:12.5px;line-height:1.35}
+#log div{padding:3px 0;border-bottom:1px solid #e6e3d8}
+.menu{display:flex;flex-wrap:wrap;gap:6px}
+#modal{position:fixed;inset:0;background:rgba(15,30,35,.55);display:none;align-items:center;justify-content:center;z-index:10;padding:10px}
+#modal.show{display:flex}
+.mbox{background:#fff;border-radius:14px;width:min(94vw,460px);max-height:88vh;overflow:auto;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.mbox h2{margin:0 0 6px;color:var(--river)}
+.mhead{margin:-16px -16px 12px;padding:14px 16px;border-radius:14px 14px 0 0;color:#fff;font-weight:800;font-size:20px}
+table.rent{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+table.rent td{padding:3px 4px;border-bottom:1px solid #eee}
+table.rent td:last-child{text-align:right;font-weight:650}
+.prow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eee;flex-wrap:wrap}
+.prow .nm{flex:1;min-width:120px;font-size:14px}
+.prow .nm small{display:block;opacity:.65}
+.chip{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.setup-row{display:flex;gap:6px;align-items:center;margin:6px 0}
+.setup-row input{flex:1;font:inherit;padding:7px;border-radius:7px;border:1px solid #bbb;min-width:0}
+.setup-row select{font:inherit;padding:7px;border-radius:7px;border:1px solid #bbb}
+.flavor{font-style:italic;opacity:.8;margin:4px 0 8px}
+.foot{font-size:11px;opacity:.6;text-align:center;padding:6px}
+@media (min-width:1150px){.side{max-height:var(--bs)} #log{max-height:none;flex:1}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="board"></div>
+  <div class="side">
+    <div class="panel"><h3>Players</h3><div id="players"></div></div>
+    <div class="panel">
+      <div class="menu">
+        <button class="btn small" onclick="openManage(S?S.turn:0)">🏠 Properties</button>
+        <button class="btn small alt" onclick="showRules()">📖 How to play</button>
+        <button class="btn small alt" onclick="confirmEndGame()">🏁 End game</button>
+        <button class="btn small alt" onclick="showSetup()">✨ New game</button>
+      </div>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;min-height:0"><h3>Game log</h3><div id="log"></div></div>
+    <div class="foot">Rockland Tycoon — a fan-made game about Rockland County, NY. Not affiliated with any board game company.</div>
+  </div>
+</div>
+<div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox" id="mbox"></div></div>
+
+<script>
+/* ===================== BOARD DATA ===================== */
+const GROUPS = {
+  brown:  {name:'Brown',      color:'#8b5a2b', house:50},
+  lblue:  {name:'Light Blue', color:'#5bc0eb', house:50},
+  pink:   {name:'Pink',       color:'#d63c96', house:100},
+  orange: {name:'Orange',     color:'#f7941d', house:100},
+  red:    {name:'Red',        color:'#e0242b', house:150},
+  yellow: {name:'Yellow',     color:'#e8c214', house:150},
+  green:  {name:'Green',      color:'#16a34a', house:200},
+  dblue:  {name:'Dark Blue',  color:'#1d4ed8', house:200}
+};
+const SPACES = [
+  {type:'go', name:'Welcome to Rockland', short:'GO!', icon:'🏁', flavor:'Collect $200 every time you pass.'},
+  {type:'prop', name:'Hillburn', group:'brown', price:60, rent:[2,10,30,90,160,250], flavor:'Tiny village at the foot of the Ramapo Mountains.'},
+  {type:'chest', name:'Town Hall', icon:'🏛️'},
+  {type:'prop', name:'Sloatsburg', group:'brown', price:60, rent:[4,20,60,180,320,450], flavor:'Gateway to Harriman State Park.'},
+  {type:'tax', name:'Property Tax', icon:'🧾', amount:200, flavor:'Rockland property taxes. Pay $200.'},
+  {type:'rail', name:'Pascack Valley Line', short:'Pascack Valley Line', icon:'🚆', price:200, flavor:'The train through Pearl River, Nanuet and Spring Valley.'},
+  {type:'prop', name:'Stony Point', group:'lblue', price:100, rent:[6,30,90,270,400,550], flavor:'Revolutionary War battlefield and historic lighthouse.'},
+  {type:'chance', name:'Rockland Adventure', short:'Adventure', icon:'🧭'},
+  {type:'prop', name:'Haverstraw', group:'lblue', price:100, rent:[6,30,90,270,400,550], flavor:'Famous for its old brickyards on Haverstraw Bay.'},
+  {type:'prop', name:'Spring Valley', group:'lblue', price:120, rent:[8,40,100,300,450,600], flavor:'Busy, diverse village in the Town of Ramapo.'},
+  {type:'jail', name:'Jail / Just Visiting', short:'Jail', icon:'🚔', flavor:'Just visiting? No worries.'},
+  {type:'prop', name:'Congers', group:'pink', price:140, rent:[10,50,150,450,625,750], flavor:'Lakeside hamlet near Rockland Lake.'},
+  {type:'util', name:'O&R Electric', short:'O&R Electric', icon:'💡', price:150, flavor:'Keeping the lights on across the county.'},
+  {type:'prop', name:'Valley Cottage', group:'pink', price:140, rent:[10,50,150,450,625,750], flavor:'Quiet hamlet in the Town of Clarkstown.'},
+  {type:'prop', name:'Blauvelt', group:'pink', price:160, rent:[12,60,180,500,700,900], flavor:'Woodsy hamlet next to Blauvelt State Park.'},
+  {type:'rail', name:'Port Jervis Line', short:'Port Jervis Line', icon:'🚂', price:200, flavor:'Commuter rail stopping in Suffern and Sloatsburg.'},
+  {type:'prop', name:'Orangeburg', group:'orange', price:180, rent:[14,70,200,550,750,950], flavor:'Home of Dominican University.'},
+  {type:'chest', name:'Town Hall', icon:'🏛️'},
+  {type:'prop', name:'Tappan', group:'orange', price:180, rent:[14,70,200,550,750,950], flavor:'Historic ’76 House and George Washington’s headquarters.'},
+  {type:'prop', name:'Nanuet', group:'orange', price:200, rent:[16,80,220,600,800,1000], flavor:'Shopping central along Route 59.'},
+  {type:'parking', name:'Palisades Center Free Parking', short:'Free Parking', icon:'🛍️', flavor:'Take a break at the mall. Nothing happens here.'},
+  {type:'prop', name:'Pearl River', group:'red', price:220, rent:[18,90,250,700,875,1050], flavor:'Known for its big St. Patrick’s Day parade.'},
+  {type:'chance', name:'Rockland Adventure', short:'Adventure', icon:'🧭'},
+  {type:'prop', name:'Suffern', group:'red', price:220, rent:[18,90,250,700,875,1050], flavor:'Home of the Lafayette Theatre.'},
+  {type:'prop', name:'New City', group:'red', price:240, rent:[20,100,300,750,925,1100], flavor:'The county seat of Rockland.'},
+  {type:'rail', name:'TOR Bus', short:'TOR Bus', icon:'🚌', price:200, flavor:'Transport of Rockland — buses all over the county.'},
+  {type:'prop', name:'Pomona', group:'yellow', price:260, rent:[22,110,330,800,975,1150], flavor:'Hilltop village on the edge of Harriman.'},
+  {type:'prop', name:'Sparkill', group:'yellow', price:260, rent:[22,110,330,800,975,1150], flavor:'Small creekside hamlet near the river.'},
+  {type:'util', name:'Rockland Water', short:'Rockland Water', icon:'💧', price:150, flavor:'Water for every faucet from Nyack to Suffern.'},
+  {type:'prop', name:'West Nyack', group:'yellow', price:280, rent:[24,120,360,850,1025,1200], flavor:'Home of the Palisades Center mall.'},
+  {type:'gotojail', name:'Busted on the Palisades Parkway', short:'Go to Jail', icon:'👮', flavor:'Go directly to jail. Do not pass GO.'},
+  {type:'prop', name:'Montebello', group:'green', price:300, rent:[26,130,390,900,1100,1275], flavor:'Upscale village in the Town of Ramapo.'},
+  {type:'prop', name:'Grand View-on-Hudson', short:'Grand View', group:'green', price:300, rent:[26,130,390,900,1100,1275], flavor:'Narrow riverside village with sweeping Hudson views.'},
+  {type:'chest', name:'Town Hall', icon:'🏛️'},
+  {type:'prop', name:'Upper Nyack', group:'green', price:320, rent:[28,150,450,1000,1200,1400], flavor:'Riverfront homes beneath Hook Mountain.'},
+  {type:'rail', name:'Hudson Link Bus', short:'Hudson Link', icon:'🚍', price:200, flavor:'Express bus across the bridge to Westchester.'},
+  {type:'chance', name:'Rockland Adventure', short:'Adventure', icon:'🧭'},
+  {type:'prop', name:'Piermont', group:'dblue', price:350, rent:[35,175,500,1100,1300,1500], flavor:'Famous for the mile-long Piermont Pier.'},
+  {type:'tax', name:'Bridge Toll', icon:'🌉', amount:100, flavor:'Crossing the Mario M. Cuomo Bridge. Pay $100.'},
+  {type:'prop', name:'Nyack', group:'dblue', price:400, rent:[50,200,600,1400,1700,2000], flavor:'Rockland’s artsy river town by the bridge.'}
+];
+const RAILS=[5,15,25,35], UTILS=[12,28];
+
+/* ===================== CARDS ===================== */
+const CHANCE = [
+  {text:'Advance to Welcome to Rockland (GO). Collect $200.', act:p=>go(p,0)},
+  {text:'Take the scenic drive up Route 9W. Advance to Nyack.', act:p=>go(p,39)},
+  {text:'Catch a show at the Lafayette Theatre. Advance to Suffern.', act:p=>go(p,23)},
+  {text:'Jury duty! Advance to New City.', act:p=>go(p,24)},
+  {text:'Bike the Old Erie Path. Advance to Piermont.', act:p=>go(p,37)},
+  {text:'Hop on the nearest train or bus. If it’s owned, pay the owner double rent.', act:p=>go(p,nearest(p,RAILS),{double:true})},
+  {text:'Running late! Take the nearest train or bus. If owned, pay double rent.', act:p=>go(p,nearest(p,RAILS),{double:true})},
+  {text:'Your power flickers. Advance to the nearest utility. If owned, pay 10× your dice roll.', act:p=>go(p,nearest(p,UTILS),{util10:true})},
+  {text:'Missed your exit on the Palisades Parkway. Go back 3 spaces.', act:p=>{p.pos=(p.pos+37)%40; land(); return true;}},
+  {text:'Caught speeding on Route 59! Go directly to jail.', act:p=>{sendToJail(p);}},
+  {text:'A friend at Town Hall vouches for you. Get Out of Jail Free (keep this card).', act:p=>{p.jailCards++;}},
+  {text:'Your booth at the Nyack Street Fair was a hit! Collect $50.', act:p=>{p.money+=50;}},
+  {text:'Parking ticket in downtown Nyack. Pay $15.', act:p=>{charge(p,15,-1);}},
+  {text:'Nor’easter damage! Pay $25 per house and $100 per hotel.', act:p=>{repairs(p,25,100);}},
+  {text:'Elected chair of the County Legislature. Pay each player $50.', act:p=>{payEach(p,50);}},
+  {text:'Your home renovation loan comes through. Collect $150.', act:p=>{p.money+=150;}}
+];
+const CHEST = [
+  {text:'Advance to Welcome to Rockland (GO). Collect $200.', act:p=>go(p,0)},
+  {text:'Property tax overpayment refunded. Collect $20.', act:p=>{p.money+=20;}},
+  {text:'Urgent care visit in Nanuet. Pay $50.', act:p=>{charge(p,50,-1);}},
+  {text:'Sold antiques at a Piermont yard sale. Collect $50.', act:p=>{p.money+=50;}},
+  {text:'Get Out of Jail Free (keep this card).', act:p=>{p.jailCards++;}},
+  {text:'Ran a red light on Route 303. Go directly to jail.', act:p=>{sendToJail(p);}},
+  {text:'Apple-picking season! Your homemade pies sell out. Collect $100.', act:p=>{p.money+=100;}},
+  {text:'It’s your birthday! Collect $10 from every player.', act:p=>{collectEach(p,10);}},
+  {text:'Life insurance matures. Collect $100.', act:p=>{p.money+=100;}},
+  {text:'Hospital bill from Good Samaritan in Suffern. Pay $100.', act:p=>{charge(p,100,-1);}},
+  {text:'School tax bill arrives. Pay $50.', act:p=>{charge(p,50,-1);}},
+  {text:'Consulting fee from a Clarkstown business. Collect $25.', act:p=>{p.money+=25;}},
+  {text:'Pothole repairs on Route 9W. Pay $40 per house and $115 per hotel.', act:p=>{repairs(p,40,115);}},
+  {text:'Second place in the Pearl River bake-off. Collect $10.', act:p=>{p.money+=10;}},
+  {text:'You inherit $100.', act:p=>{p.money+=100;}},
+  {text:'Bank error in your favor. Collect $200.', act:p=>{p.money+=200;}}
+];
+
+/* ===================== STATE ===================== */
+const TOKENS=['🚗','⛵','🍎','🥾'];
+const PCOLORS=['#e11d48','#2563eb','#16a34a','#f59e0b'];
+const SAVE_KEY='rocklandTycoon.v1';
+let S=null, busy=false, aiTimer=null, manageFor=null;
+
+const r6=()=>1+Math.floor(Math.random()*6);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const $m=n=>'$'+Math.round(n).toLocaleString();
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cur=()=>S.players[S.turn];
+const buyable=s=>s.type==='prop'||s.type==='rail'||s.type==='util';
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function log(t){S.log.unshift(t); if(S.log.length>120)S.log.pop();}
+function nearest(p,list){return list.find(i=>i>p.pos) ?? list[0];}
+function groupMembers(g){return SPACES.map((s,i)=>s.group===g?i:-1).filter(i=>i>=0);}
+function ownsGroup(pi,g){return groupMembers(g).every(i=>S.own[i].owner===pi);}
+function debtTotal(){return S.debts.reduce((a,d)=>a+d.amt,0);}
+function netWorth(pi){
+  const p=S.players[pi]; let w=p.money;
+  S.own.forEach((o,i)=>{ if(o&&o.owner===pi){ const s=SPACES[i]; w+=o.mort?s.price/2:s.price; if(o.houses) w+=o.houses*GROUPS[s.group].house; }});
+  return w;
+}
+
+function newGame(cfg){
+  clearTimeout(aiTimer); busy=false;
+  S={
+    players:cfg.map((c,i)=>({name:c.name,ai:c.ai,token:TOKENS[i],color:PCOLORS[i],money:1500,pos:0,inJail:false,jailTurns:0,jailCards:0,bankrupt:false})),
+    own:SPACES.map(s=>buyable(s)?{owner:-1,houses:0,mort:false}:null),
+    turn:0, phase:'roll', dice:[1,1], doubles:0, extraRoll:false, debts:[], log:[], msg:'', card:null,
+    decks:{chance:shuffle(CHANCE.map((_,i)=>i)), chest:shuffle(CHEST.map((_,i)=>i))},
+    winner:-1, lastLand:-1
+  };
+  log('Welcome to Rockland Tycoon! Everyone starts with $1,500.');
+  startTurn();
+}
+
+function startTurn(){
+  const p=cur(); S.doubles=0; S.extraRoll=false; S.card=null; S.debts=[];
+  if(p.inJail){ S.phase='jail'; S.msg=`${p.name} is in jail. Pay $50, use a card, or try to roll doubles.`; }
+  else { S.phase='roll'; S.msg=`${p.name}, roll the dice!`; }
+  update();
+}
+
+/* ===================== MOVEMENT ===================== */
+async function walk(p,n){
+  busy=true;
+  const delay=p.ai?90:130;
+  for(let k=0;k<n;k++){
+    p.pos=(p.pos+1)%40;
+    if(p.pos===0){ p.money+=200; log(`${p.name} passed Welcome to Rockland and collects $200.`); }
+    render(); await sleep(delay);
+  }
+  busy=false;
+}
+function moveTo(p,idx){
+  if(idx<p.pos){ p.money+=200; log(`${p.name} passed Welcome to Rockland and collects $200.`); }
+  p.pos=idx;
+}
+function go(p,idx,opts){ moveTo(p,idx); land(opts); return true; }
+function sendToJail(p){ p.pos=10; p.inJail=true; p.jailTurns=0; S.extraRoll=false; S.doubles=0; }
+
+async function doRoll(){
+  if(busy||!S) return;
+  if(S.phase!=='roll'&&S.phase!=='jail') return;
+  const p=cur(), d1=r6(), d2=r6(), sum=d1+d2, dbl=d1===d2;
+  S.dice=[d1,d2]; S.card=null;
+  if(S.phase==='jail'){
+    if(dbl){
+      p.inJail=false; p.jailTurns=0; S.extraRoll=false;
+      log(`${p.name} rolled doubles (${d1}+${d2}) and walks out of jail!`);
+      await walk(p,sum); land(); return;
+    }
+    p.jailTurns++;
+    if(p.jailTurns>=3){
+      log(`${p.name} rolled ${d1}+${d2}. Third try failed, so ${p.name} pays $50 bail and moves.`);
+      p.inJail=false; p.jailTurns=0; S.extraRoll=false;
+      charge(p,50,-1);
+      await walk(p,sum); land(); return;
+    }
+    S.msg=`${p.name} rolled ${d1}+${d2}. No doubles, still in jail.`; log(S.msg);
+    S.phase='end'; update(); return;
+  }
+  if(dbl){
+    S.doubles++;
+    if(S.doubles===3){
+      S.msg=`Three doubles in a row! ${p.name} gets pulled over for speeding. Go to jail!`; log(S.msg);
+      sendToJail(p); finish(); return;
+    }
+  }
+  S.extraRoll=dbl;
+  log(`${p.name} rolled ${d1} + ${d2} = ${sum}${dbl?' (doubles!)':''}`);
+  await walk(p,sum); land();
+}
+
+function land(opts={}){
+  const p=cur(), i=p.pos, s=SPACES[i];
+  S.lastLand=i;
+  switch(s.type){
+    case 'prop': case 'rail': case 'util': {
+      const o=S.own[i];
+      if(o.owner===-1){
+        if(p.money>=s.price){ S.phase='buy'; S.msg=`${p.name} landed on ${s.name}. Buy it for ${$m(s.price)}?`; update(); return; }
+        S.msg=`${p.name} landed on ${s.name} but can’t afford ${$m(s.price)}.`; log(S.msg); break;
+      }
+      if(o.owner===S.turn){ S.msg=`${p.name} landed on their own property, ${s.name}.`; break; }
+      if(o.mort){ S.msg=`${s.name} is mortgaged, so no rent is due.`; log(S.msg); break; }
+      const rent=calcRent(i,opts), ow=S.players[o.owner];
+      S.msg=`${p.name} pays ${$m(rent)} rent to ${ow.name} for ${s.name}.`; log(S.msg);
+      charge(p,rent,o.owner); break;
+    }
+    case 'tax': S.msg=`${s.name}! ${p.name} pays ${$m(s.amount)}.`; log(S.msg); charge(p,s.amount,-1); break;
+    case 'chance': case 'chest': drawCard(s.type); return;
+    case 'gotojail': S.msg=`Busted on the Palisades Parkway! ${p.name} goes to jail.`; log(S.msg); sendToJail(p); break;
+    case 'parking': S.msg=`${p.name} grabbed free parking at the Palisades Center.`; break;
+    case 'jail': S.msg=`${p.name} is just visiting the jail.`; break;
+    case 'go': S.msg=`${p.name} landed on Welcome to Rockland.`; break;
+  }
+  finish();
+}
+
+function drawCard(type){
+  const p=cur(), deck=S.decks[type], idx=deck.shift(); deck.push(idx);
+  const card=(type==='chance'?CHANCE:CHEST)[idx];
+  const title=type==='chance'?'Rockland Adventure':'Town Hall';
+  S.card={title,text:card.text};
+  S.msg=`${p.name} drew a ${title} card.`;
+  log(`${p.name} drew ${title}: “${card.text}”`);
+  const moved=card.act(p);
+  if(!moved) finish();
+}
+
+function finish(){
+  if(S.phase==='over') return;
+  const p=cur();
+  if(S.debts.length){ S.phase='debt'; S.msg=`${p.name} owes ${$m(debtTotal())} but only has ${$m(p.money)}. Sell houses or mortgage properties, or declare bankruptcy.`; }
+  else if(p.inJail||!S.extraRoll) S.phase='end';
+  else { S.phase='roll'; S.msg+=' Doubles, so roll again!'; }
+  update();
+}
+
+/* ===================== MONEY ===================== */
+function calcRent(i,opts={}){
+  const s=SPACES[i], o=S.own[i];
+  if(s.type==='prop'){ if(o.houses) return s.rent[o.houses]; return s.rent[0]*(ownsGroup(o.owner,s.group)?2:1); }
+  if(s.type==='rail'){ const n=RAILS.filter(j=>S.own[j].owner===o.owner).length; return 25*2**(n-1)*(opts.double?2:1); }
+  if(s.type==='util'){ const n=UTILS.filter(j=>S.own[j].owner===o.owner).length; return (S.dice[0]+S.dice[1])*((opts.util10||n===2)?10:4); }
+  return 0;
+}
+function charge(p,amt,to){
+  if(amt<=0) return;
+  if(S.debts.length===0 && p.money>=amt){ p.money-=amt; if(to>=0) S.players[to].money+=amt; }
+  else S.debts.push({amt,to});
+}
+function payEach(p,amt){ S.players.forEach((o,j)=>{ if(j!==S.turn&&!o.bankrupt) charge(p,amt,j); }); }
+function collectEach(p,amt){ S.players.forEach((o,j)=>{ if(j!==S.turn&&!o.bankrupt){ const a=Math.min(amt,o.money); o.money-=a; p.money+=a; }}); }
+function repairs(p,perHouse,perHotel){
+  let t=0; S.own.forEach((o,i)=>{ if(o&&o.owner===S.turn&&o.houses) t+= o.houses===5?perHotel:o.houses*perHouse; });
+  if(t){ log(`${p.name} pays ${$m(t)} for repairs.`); charge(p,t,-1); } else log(`${p.name} has no buildings, so no repairs owed.`);
+}
+function payDebts(){
+  const p=cur(), t=debtTotal();
+  if(S.phase!=='debt'||p.money<t) return;
+  S.debts.forEach(d=>{ p.money-=d.amt; if(d.to>=0) S.players[d.to].money+=d.amt; });
+  S.debts=[]; S.msg=`${p.name} paid ${$m(t)}.`; log(S.msg); finish();
+}
+
+/* ===================== ACTIONS ===================== */
+function buy(){
+  if(S.phase!=='buy'||busy) return;
+  const p=cur(), s=SPACES[p.pos];
+  p.money-=s.price; S.own[p.pos].owner=S.turn;
+  S.msg=`${p.name} bought ${s.name} for ${$m(s.price)}.`; log('🏡 '+S.msg);
+  if(s.group&&ownsGroup(S.turn,s.group)) log(`${p.name} now owns every ${GROUPS[s.group].name} property! Rent doubles and houses can be built.`);
+  finish();
+}
+function pass(){
+  if(S.phase!=='buy'||busy) return;
+  const p=cur(); S.msg=`${p.name} passed on ${SPACES[p.pos].name}.`; log(S.msg); finish();
+}
+function payBail(){
+  const p=cur(); if(S.phase!=='jail'||p.money<50) return;
+  p.money-=50; p.inJail=false; p.jailTurns=0; S.phase='roll';
+  S.msg=`${p.name} paid $50 bail. Now roll!`; log(S.msg); update();
+}
+function useJailCard(){
+  const p=cur(); if(S.phase!=='jail'||p.jailCards<1) return;
+  p.jailCards--; p.inJail=false; p.jailTurns=0; S.phase='roll';
+  S.msg=`${p.name} used a Get Out of Jail Free card. Now roll!`; log(S.msg); update();
+}
+function endTurn(){
+  if(S.phase!=='end'||busy) return;
+  let n=S.turn;
+  do{ n=(n+1)%S.players.length; }while(S.players[n].bankrupt);
+  S.turn=n; startTurn();
+}
+function declareBankrupt(){
+  const p=cur(), pi=S.turn;
+  const cr=S.debts.find(d=>d.to>=0), ci=cr?cr.to:-1;
+  S.own.forEach((o,i)=>{ if(o&&o.owner===pi&&o.houses){ p.money+=o.houses*GROUPS[SPACES[i].group].house/2; o.houses=0; }});
+  if(ci>=0){
+    const c=S.players[ci]; c.money+=Math.max(0,p.money); c.jailCards+=p.jailCards;
+    S.own.forEach(o=>{ if(o&&o.owner===pi) o.owner=ci; });
+    log(`💥 ${p.name} is bankrupt! ${c.name} takes their cash and properties.`);
+  } else {
+    S.own.forEach(o=>{ if(o&&o.owner===pi){ o.owner=-1; o.mort=false; }});
+    log(`💥 ${p.name} is bankrupt! Their properties go back to the bank.`);
+  }
+  p.money=0; p.bankrupt=true; p.jailCards=0; p.inJail=false; S.debts=[];
+  const alive=S.players.map((x,i)=>i).filter(i=>!S.players[i].bankrupt);
+  if(alive.length===1){ gameOver(alive[0]); return; }
+  S.phase='end'; endTurn();
+}
+function gameOver(wi){
+  S.phase='over'; S.winner=wi;
+  S.msg=`🏆 ${S.players[wi].name} wins Rockland County!`; log(S.msg); update();
+}
+function confirmEndGame(){
+  if(!S||S.phase==='over') return;
+  openModal(`<h2>End the game now?</h2><p>The player with the highest net worth (cash + property + buildings) wins.</p>
+  <div class="actions" style="justify-content:flex-end"><button class="btn alt" onclick="closeModal()">Keep playing</button>
+  <button class="btn" onclick="endByWorth()">End game</button></div>`);
+}
+function endByWorth(){
+  closeModal();
+  let best=-1,bw=-1; S.players.forEach((p,i)=>{ if(!p.bankrupt){ const w=netWorth(i); log(`${p.name}: net worth ${$m(w)}`); if(w>bw){bw=w;best=i;} }});
+  gameOver(best);
+}
+
+/* ===================== BUILDING & MORTGAGES ===================== */
+function myTurnHuman(pi){ return S&&pi===S.turn&&!cur().ai&&!busy&&S.phase!=='over'; }
+function groupHouses(g){ return groupMembers(g).map(i=>S.own[i].houses); }
+function canBuild(i){
+  const s=SPACES[i],o=S.own[i]; if(s.type!=='prop'||o.owner!==S.turn) return false;
+  if(!ownsGroup(S.turn,s.group)) return false;
+  if(groupMembers(s.group).some(j=>S.own[j].mort)) return false;
+  return o.houses<5 && o.houses===Math.min(...groupHouses(s.group)) && cur().money>=GROUPS[s.group].house;
+}
+function canSell(i){ const s=SPACES[i],o=S.own[i]; return s.type==='prop'&&o.owner===S.turn&&o.houses>0&&o.houses===Math.max(...groupHouses(s.group)); }
+function canMortgage(i){ const s=SPACES[i],o=S.own[i]; if(o.owner!==S.turn||o.mort) return false; return !(s.group&&groupHouses(s.group).some(h=>h>0)); }
+const unmortCost=i=>Math.ceil(SPACES[i].price/2*1.1);
+function canUnmortgage(i){ const o=S.own[i]; return o.owner===S.turn&&o.mort&&cur().money>=unmortCost(i); }
+function build(i){ if(!canBuild(i)) return; const s=SPACES[i]; cur().money-=GROUPS[s.group].house; S.own[i].houses++; log(`${cur().name} built ${S.own[i].houses===5?'a hotel':'a house'} on ${s.name}.`); }
+function sell(i){ if(!canSell(i)) return; const s=SPACES[i]; S.own[i].houses--; cur().money+=GROUPS[s.group].house/2; log(`${cur().name} sold a building on ${s.name}.`); }
+function mortgage(i){ if(!canMortgage(i)) return; S.own[i].mort=true; cur().money+=SPACES[i].price/2; log(`${cur().name} mortgaged ${SPACES[i].name} for ${$m(SPACES[i].price/2)}.`); }
+function unmortgage(i){ if(!canUnmortgage(i)) return; cur().money-=unmortCost(i); S.own[i].mort=false; log(`${cur().name} paid off the mortgage on ${SPACES[i].name}.`); }
+function manageAct(fn,i){ if(!myTurnHuman(manageFor)) return; fn(i); update(); openManage(manageFor); }
+
+/* ===================== TRADING ===================== */
+function tradeable(i){ const s=SPACES[i]; return !(s.group&&groupHouses(s.group).some(h=>h>0)); }
+function canTradeNow(){ return S&&!busy&&(S.phase==='roll'||S.phase==='end'||S.phase==='jail'); }
+function aiAsk(i,owner){ // lowest price an AI owner will accept
+  const s=SPACES[i]; if(s.group&&ownsGroup(owner,s.group)) return Infinity;
+  const held=s.group?groupMembers(s.group).filter(j=>S.own[j].owner===owner).length:1;
+  return Math.ceil(s.price*(held>=2?3:1.6));
+}
+function transfer(i,buyer,amt){
+  const o=S.own[i], seller=o.owner;
+  S.players[buyer].money-=amt; S.players[seller].money+=amt; o.owner=buyer;
+  log(`🤝 ${S.players[buyer].name} bought ${SPACES[i].name} from ${S.players[seller].name} for ${$m(amt)}.`);
+  const g=SPACES[i].group; if(g&&ownsGroup(buyer,g)) log(`${S.players[buyer].name} now owns every ${GROUPS[g].name} property!`);
+}
+function offerDialog(i){
+  if(!canTradeNow()||cur().ai) return;
+  const s=SPACES[i], owner=S.players[S.own[i].owner];
+  openModal(`<h2>Offer to buy ${s.name}</h2><p>Owner: ${esc(owner.name)}${owner.ai?' (computer)':''}. You have ${$m(cur().money)}.</p>
+  <div class="setup-row"><span>$</span><input id="offer" type="number" min="1" max="${cur().money}" value="${Math.min(cur().money,Math.round(s.price*1.5))}"></div>
+  <div class="actions" style="justify-content:flex-end"><button class="btn alt" onclick="openManage(${S.own[i].owner})">Back</button>
+  <button class="btn" onclick="sendOffer(${i})">Send offer</button></div>`);
+}
+function sendOffer(i){
+  const amt=Math.floor(+document.getElementById('offer').value||0), buyer=S.turn, p=cur(), oi=S.own[i].owner, owner=S.players[oi];
+  if(amt<1||amt>p.money||!tradeable(i)) return;
+  if(owner.ai){
+    if(amt>=aiAsk(i,oi)){ transfer(i,buyer,amt); S.msg=`${owner.name} accepted your offer!`; update(); openManage(buyer); }
+    else { log(`${owner.name} turned down ${p.name}’s ${$m(amt)} offer for ${SPACES[i].name}.`); update();
+      openModal(`<h2>Offer declined</h2><p>${esc(owner.name)} said no to ${$m(amt)} for ${SPACES[i].name}. Try a higher offer?</p>
+      <div class="actions" style="justify-content:flex-end"><button class="btn alt" onclick="closeModal()">Close</button><button class="btn" onclick="offerDialog(${i})">New offer</button></div>`); }
+  } else {
+    openModal(`<h2>${owner.token} ${esc(owner.name)}, you have an offer!</h2><p>${esc(p.name)} wants to buy <b>${SPACES[i].name}</b> for <b>${$m(amt)}</b>.</p><p style="opacity:.7">Hand the device to ${esc(owner.name)}.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn alt" onclick="declineHuman(${i},${amt})">Decline</button><button class="btn" onclick="acceptHuman(${i},${amt})">Accept</button></div>`);
+  }
+}
+function acceptHuman(i,amt){ if(cur().money<amt||!tradeable(i)) return closeModal(); transfer(i,S.turn,amt); closeModal(); update(); }
+function declineHuman(i,amt){ log(`${S.players[S.own[i].owner].name} declined ${cur().name}’s ${$m(amt)} offer for ${SPACES[i].name}.`); closeModal(); update(); }
+function aiTrade(p){
+  Object.keys(GROUPS).forEach(g=>{
+    const mem=groupMembers(g), mine=mem.filter(j=>S.own[j].owner===S.turn);
+    const missing=mem.filter(j=>S.own[j].owner!==S.turn);
+    if(missing.length!==1||mine.length<1) return;
+    const j=missing[0], oi=S.own[j].owner;
+    if(oi<0||!S.players[oi].ai||!tradeable(j)) return;
+    const ask=aiAsk(j,oi);
+    if(ask!==Infinity&&p.money-ask>=150) transfer(j,S.turn,ask);
+  });
+}
+
+/* ===================== COMPUTER PLAYERS ===================== */
+function scheduleAI(){
+  clearTimeout(aiTimer);
+  if(!S||S.phase==='over'||busy) return;
+  if(cur().ai) aiTimer=setTimeout(aiStep,850);
+}
+function aiStep(){
+  if(!S||busy||S.phase==='over') return;
+  const p=cur(); if(!p.ai) return;
+  switch(S.phase){
+    case 'jail':
+      if(p.jailCards>0) useJailCard();
+      else if(p.money>=400) payBail();
+      else doRoll();
+      break;
+    case 'roll': aiManage(p); doRoll(); break;
+    case 'buy': {
+      const s=SPACES[p.pos];
+      const completes=s.group&&groupMembers(s.group).every(j=>j===p.pos||S.own[j].owner===S.turn);
+      if(p.money-s.price>=120||(completes&&p.money>=s.price)) buy(); else pass();
+      break;
+    }
+    case 'debt': aiRaise(p); if(p.money>=debtTotal()) payDebts(); else declareBankrupt(); break;
+    case 'end': aiManage(p); endTurn(); break;
+  }
+}
+function aiManage(p){
+  aiTrade(p);
+  S.own.forEach((o,i)=>{ if(o&&o.mort&&o.owner===S.turn&&p.money-unmortCost(i)>=400) unmortgage(i); });
+  for(let k=0;k<20;k++){
+    const opts=S.own.map((o,i)=>i).filter(i=>S.own[i]&&canBuild(i)&&p.money-GROUPS[SPACES[i].group].house>=250);
+    if(!opts.length) break;
+    build(opts[0]);
+  }
+}
+function aiRaise(p){
+  const need=()=>p.money<debtTotal();
+  for(let k=0;k<100&&need();k++){
+    const sells=S.own.map((o,i)=>i).filter(i=>S.own[i]&&canSell(i)).sort((a,b)=>SPACES[b].price-SPACES[a].price);
+    if(sells.length){ sell(sells[0]); continue; }
+    const morts=S.own.map((o,i)=>i).filter(i=>S.own[i]&&canMortgage(i)).sort((a,b)=>SPACES[a].price-SPACES[b].price);
+    if(morts.length){ mortgage(morts[0]); continue; }
+    break;
+  }
+}
+
+/* ===================== RENDERING ===================== */
+function gridPos(i){
+  if(i<=10) return [11,11-i];
+  if(i<=20) return [11-(i-10),1];
+  if(i<=30) return [1,1+(i-20)];
+  return [1+(i-30),11];
+}
+function sideOf(i){ if(i%10===0) return ''; if(i<10) return 'b'; if(i<20) return 'l'; if(i<30) return 't'; return 'r'; }
+function buildBoard(){
+  const b=document.getElementById('board'); b.innerHTML='';
+  SPACES.forEach((s,i)=>{
+    const d=document.createElement('div'); const [r,c]=gridPos(i); const side=sideOf(i);
+    d.className='tile'+(side?' side-'+side:' corner'); d.id='t'+i;
+    d.style.gridRow=r; d.style.gridColumn=c; d.onclick=()=>showSpace(i);
+    b.appendChild(d);
+  });
+  const c=document.createElement('div'); c.id='center'; b.appendChild(c);
+}
+function tileHTML(i){
+  const s=SPACES[i], o=S&&S.own[i];
+  let h='';
+  if(s.type==='prop'){
+    const n=o?o.houses:0;
+    h+=`<div class="bar" style="background:${GROUPS[s.group].color}">${n===5?'🏨':n?'🏠'+(n>1?n:''):''}</div>`;
+    h+=`<div class="tb"><div class="name">${s.short||s.name}</div><div class="price">$${s.price}</div></div>`;
+  } else {
+    h+=`<div class="tb"><div class="icon">${s.icon}</div><div class="name">${s.short||s.name}</div>${s.price?`<div class="price">$${s.price}</div>`:''}${s.amount?`<div class="price">$${s.amount}</div>`:''}</div>`;
+  }
+  if(S){
+    const here=S.players.filter(p=>!p.bankrupt&&p.pos===i);
+    if(here.length) h+=`<div class="tokens">${here.map(p=>`<div class="tok" style="border-color:${p.color}">${p.token}</div>`).join('')}</div>`;
+  }
+  return h;
+}
+function render(){
+  SPACES.forEach((s,i)=>{
+    const t=document.getElementById('t'+i); if(!t) return;
+    t.innerHTML=tileHTML(i);
+    const o=S&&S.own[i];
+    t.style.boxShadow=(o&&o.owner>=0)?`inset 0 0 0 3px ${S.players[o.owner].color}`:'';
+    t.classList.toggle('mort',!!(o&&o.mort));
+  });
+  if(S&&S.lastLand>=0&&!busy){ const t=document.getElementById('t'+S.lastLand); if(t){ t.classList.remove('pulse'); void t.offsetWidth; t.classList.add('pulse'); } }
+  renderCenter(); renderSide();
+}
+function renderCenter(){
+  const c=document.getElementById('center');
+  let h=`<div><div class="title">ROCKLAND<br>TYCOON</div><div class="sub">Rockland County, NY</div></div>`;
+  if(!S){ c.innerHTML=h+`<button class="btn" onclick="showSetup()">Start a game</button>`; return; }
+  const p=cur(), F='⚀⚁⚂⚃⚄⚅';
+  h+=`<div class="dice">${F[S.dice[0]-1]}${F[S.dice[1]-1]}</div>`;
+  if(S.phase!=='over') h+=`<div class="turn" style="color:${p.color}">${p.token} ${esc(p.name)}${p.ai?' (computer)':''} · ${$m(p.money)}</div>`;
+  if(S.card) h+=`<div class="card"><b>${S.card.title}</b>${S.card.text}</div>`;
+  h+=`<div class="msg">${esc(S.msg)}</div>`;
+  const human=!p.ai, dis=busy||!human?'disabled':'';
+  let a='';
+  switch(S.phase){
+    case 'roll': a=`<button class="btn" ${dis} onclick="doRoll()">🎲 Roll dice</button>`; break;
+    case 'jail': a=`<button class="btn" ${dis} onclick="doRoll()">🎲 Roll for doubles</button>
+      <button class="btn alt" ${dis||(p.money<50?'disabled':'')} onclick="payBail()">Pay $50</button>
+      ${p.jailCards?`<button class="btn alt" ${dis} onclick="useJailCard()">Use card</button>`:''}`; break;
+    case 'buy': a=`<button class="btn" ${dis} onclick="buy()">Buy for ${$m(SPACES[p.pos].price)}</button><button class="btn alt" ${dis} onclick="pass()">No thanks</button>`; break;
+    case 'end': a=`<button class="btn" ${dis} onclick="endTurn()">End turn ➜</button>`; break;
+    case 'debt': a=`<button class="btn" ${dis||(p.money<debtTotal()?'disabled':'')} onclick="payDebts()">Pay ${$m(debtTotal())}</button>
+      <button class="btn warn" ${dis} onclick="confirmBankrupt()">Bankrupt</button>`; break;
+    case 'over': a=`<button class="btn" onclick="showSetup()">Play again</button>`; break;
+  }
+  if(human&&S.phase!=='over') a+=`<button class="btn alt" ${busy?'disabled':''} onclick="openManage(S.turn)">🏠 Manage</button>`;
+  if(!human&&S.phase!=='over') a=`<div class="msg" style="opacity:.6">Computer is thinking…</div>`;
+  c.innerHTML=h+`<div class="actions">${a}</div>`;
+}
+function renderSide(){
+  const pl=document.getElementById('players');
+  if(!S){ pl.innerHTML='<div class="msg">No game yet.</div>'; document.getElementById('log').innerHTML=''; return; }
+  pl.innerHTML=S.players.map((p,i)=>{
+    const sw=S.own.map((o,j)=>o&&o.owner===i?`<span class="sw" title="${SPACES[j].name}" style="background:${SPACES[j].group?GROUPS[SPACES[j].group].color:'#888'};${o.mort?'opacity:.35':''}"></span>`:'').join('');
+    return `<div class="pcard ${i===S.turn&&S.phase!=='over'?'active':''} ${p.bankrupt?'out':''}" onclick="openManage(${i})">
+      <div class="tk" style="border-color:${p.color}">${p.token}</div>
+      <div class="info"><div><b>${esc(p.name)}</b>${p.ai?' 🤖':''}${p.inJail?' 🚔':''}${p.jailCards?` 🎟️×${p.jailCards}`:''}</div>
+      <div class="money">${$m(p.money)}</div><div class="swatches">${sw}</div></div></div>`;
+  }).join('');
+  document.getElementById('log').innerHTML=S.log.map(t=>`<div>${esc(t)}</div>`).join('');
+}
+function update(){ render(); save(); scheduleAI(); }
+
+/* ===================== MODALS ===================== */
+function openModal(h){ document.getElementById('mbox').innerHTML=h; document.getElementById('modal').classList.add('show'); }
+function closeModal(){ document.getElementById('modal').classList.remove('show'); manageFor=null; }
+function confirmBankrupt(){
+  openModal(`<h2>Declare bankruptcy?</h2><p>You’ll be out of the game. Try selling houses or mortgaging first using <b>Manage</b>.</p>
+  <div class="actions" style="justify-content:flex-end"><button class="btn alt" onclick="closeModal()">Cancel</button>
+  <button class="btn warn" onclick="closeModal();declareBankrupt()">I’m bankrupt</button></div>`);
+}
+function showSpace(i){
+  const s=SPACES[i], o=S&&S.own[i];
+  const color=s.group?GROUPS[s.group].color:'var(--river)';
+  let h=`<div class="mhead" style="background:${color}">${s.icon||''} ${s.name}</div>`;
+  if(s.flavor) h+=`<div class="flavor">${s.flavor}</div>`;
+  if(s.type==='prop'){
+    const hc=GROUPS[s.group].house;
+    h+=`<table class="rent"><tr><td>Price</td><td>${$m(s.price)}</td></tr><tr><td>Rent</td><td>${$m(s.rent[0])}</td></tr>
+    <tr><td>Rent with full color set</td><td>${$m(s.rent[0]*2)}</td></tr>
+    ${[1,2,3,4].map(n=>`<tr><td>With ${n} house${n>1?'s':''}</td><td>${$m(s.rent[n])}</td></tr>`).join('')}
+    <tr><td>With hotel</td><td>${$m(s.rent[5])}</td></tr><tr><td>House / hotel cost</td><td>${$m(hc)} each</td></tr>
+    <tr><td>Mortgage value</td><td>${$m(s.price/2)}</td></tr></table>`;
+  } else if(s.type==='rail'){
+    h+=`<table class="rent"><tr><td>Price</td><td>$200</td></tr><tr><td>Rent, own 1</td><td>$25</td></tr><tr><td>Own 2</td><td>$50</td></tr><tr><td>Own 3</td><td>$100</td></tr><tr><td>Own all 4</td><td>$200</td></tr></table>`;
+  } else if(s.type==='util'){
+    h+=`<p>Price $150. Rent is 4× the dice roll if you own one utility, or 10× if you own both.</p>`;
+  }
+  if(o){
+    h+=`<p><b>Owner:</b> ${o.owner>=0?esc(S.players[o.owner].name):'For sale'}${o.mort?' (mortgaged)':''}${o.houses?` · ${o.houses===5?'Hotel':o.houses+' house(s)'}`:''}</p>`;
+  }
+  h+=`<div class="actions" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Close</button></div>`;
+  openModal(h);
+}
+function openManage(pi){
+  if(!S) return;
+  manageFor=pi;
+  const p=S.players[pi], can=myTurnHuman(pi);
+  const mine=S.own.map((o,i)=>i).filter(i=>S.own[i]&&S.own[i].owner===pi);
+  let h=`<h2>${p.token} ${esc(p.name)}’s properties</h2><p><b>Cash:</b> ${$m(p.money)} · <b>Net worth:</b> ${$m(netWorth(pi))}${S.phase==='debt'&&pi===S.turn?` · <b style="color:#b42318">Owes ${$m(debtTotal())}</b>`:''}</p>`;
+  const canOffer=pi!==S.turn&&!cur().ai&&canTradeNow()&&!p.bankrupt;
+  if(!can&&!canOffer) h+=`<p style="opacity:.7;font-size:13px">${p.ai?'Computer players manage their own properties.':'You can only build or mortgage during your own turn.'}</p>`;
+  if(canOffer) h+=`<p style="opacity:.75;font-size:13px">Want one of these? Tap <b>Make offer</b> (only properties with no houses on their color set).</p>`;
+  if(!mine.length) h+=`<p>No properties yet.</p>`;
+  mine.forEach(i=>{
+    const s=SPACES[i], o=S.own[i];
+    const color=s.group?GROUPS[s.group].color:'#888';
+    const status=o.mort?'Mortgaged':o.houses===5?'Hotel':o.houses?`${o.houses} house${o.houses>1?'s':''}`:(s.type==='prop'?`Rent ${$m(calcRentPreview(i))}`:'');
+    let btns='';
+    if(can){
+      if(s.type==='prop') btns+=`<button class="btn small" ${canBuild(i)?'':'disabled'} onclick="manageAct(build,${i})">+🏠 ${$m(GROUPS[s.group].house)}</button>
+        <button class="btn small alt" ${canSell(i)?'':'disabled'} onclick="manageAct(sell,${i})">−🏠</button>`;
+      btns+= o.mort ? `<button class="btn small alt" ${canUnmortgage(i)?'':'disabled'} onclick="manageAct(unmortgage,${i})">Unmortgage ${$m(unmortCost(i))}</button>`
+                    : `<button class="btn small alt" ${canMortgage(i)?'':'disabled'} onclick="manageAct(mortgage,${i})">Mortgage +${$m(s.price/2)}</button>`;
+    }
+    if(canOffer) btns+=`<button class="btn small" ${tradeable(i)?'':'disabled'} onclick="offerDialog(${i})">Make offer</button>`;
+    h+=`<div class="prow"><div class="nm"><span class="chip" style="background:${color}"></span>${s.name}<small>${status}</small></div>${btns}</div>`;
+  });
+  if(can) h+=`<p style="font-size:12.5px;opacity:.75">Tip: own every property of one color to build. Houses must be built evenly across the set. A hotel replaces 4 houses.</p>`;
+  h+=`<div class="actions" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Done</button></div>`;
+  openModal(h);
+}
+function calcRentPreview(i){ const s=SPACES[i],o=S.own[i]; return o.houses?s.rent[o.houses]:s.rent[0]*(ownsGroup(o.owner,s.group)?2:1); }
+function showRules(){
+  openModal(`<h2>How to play</h2>
+  <p><b>Goal:</b> be the last player standing (or the richest when you end the game).</p>
+  <p>🎲 <b>Roll</b> and move around Rockland County. Pass <b>Welcome to Rockland</b> to collect $200.</p>
+  <p>🏡 <b>Land on an unowned town, transit line or utility</b> to buy it. If someone else owns it, you pay them rent.</p>
+  <p>🎨 <b>Own a whole color set</b> to double the rent and start building houses (up to 4, then a hotel). Build evenly across the set.</p>
+  <p>🚆 <b>Transit lines:</b> rent goes up with each one you own. 💡 <b>Utilities:</b> rent is based on the dice.</p>
+  <p>🤝 <b>Trading:</b> on your turn, tap another player in the Players list and use <b>Make offer</b> to buy one of their properties.</p>
+  <p>🧭 <b>Rockland Adventure</b> and 🏛️ <b>Town Hall</b> cards can help or hurt you.</p>
+  <p>🚔 <b>Jail:</b> pay $50, use a Get Out of Jail Free card, or try to roll doubles (up to 3 turns). Rolling doubles 3 times in a row sends you to jail.</p>
+  <p>💸 <b>Short on cash?</b> Sell houses (half price) or mortgage properties under <b>Manage</b>. If you still can’t pay, you’re bankrupt.</p>
+  <p>🤖 Play against the computer, or pass the device between friends. The game saves itself in your browser.</p>
+  <p>Tap any space on the board to see its details.</p>
+  <div class="actions" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Got it</button></div>`);
+}
+function showSetup(){
+  const saved=loadSaved();
+  let rows='';
+  for(let i=0;i<4;i++){
+    rows+=`<div class="setup-row" id="row${i}"><span style="font-size:22px">${TOKENS[i]}</span>
+      <input id="nm${i}" value="${i===0?'You':['','Mohegan','Hook','Tappan'][i]+' Bot'}" maxlength="16">
+      <select id="ai${i}"><option value="0" ${i===0?'selected':''}>Human</option><option value="1" ${i>0?'selected':''}>Computer</option></select></div>`;
+  }
+  openModal(`<h2>🏁 New game</h2><p>Buy up Rockland County, from Hillburn to Nyack!</p>
+  <label>Number of players: <select id="np" onchange="setupRows()"><option>2</option><option>3</option><option selected>4</option></select></label>
+  <div style="margin-top:8px">${rows}</div>
+  <p style="font-size:12.5px;opacity:.75">Set more than one player to Human to pass the device around with friends.</p>
+  <div class="actions" style="justify-content:flex-end">
+    ${saved&&saved.phase!=='over'?`<button class="btn alt" onclick="continueSaved()">Continue saved game</button>`:''}
+    <button class="btn" onclick="startFromSetup()">Start game</button></div>`);
+  setupRows();
+}
+function setupRows(){ const n=+document.getElementById('np').value; for(let i=0;i<4;i++) document.getElementById('row'+i).style.display=i<n?'flex':'none'; }
+function startFromSetup(){
+  const n=+document.getElementById('np').value, cfg=[];
+  for(let i=0;i<n;i++) cfg.push({name:(document.getElementById('nm'+i).value.trim()||`Player ${i+1}`).slice(0,16), ai:document.getElementById('ai'+i).value==='1'});
+  closeModal(); newGame(cfg);
+}
+
+/* ===================== SAVE / LOAD ===================== */
+function save(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+function loadSaved(){ try{ const t=localStorage.getItem(SAVE_KEY); return t?JSON.parse(t):null; }catch(e){ return null; } }
+function continueSaved(){
+  const g=loadSaved(); if(!g) return;
+  closeModal(); S=g; busy=false;
+  if(S.phase==='debt'&&!S.debts.length) S.phase='end';
+  update();
+}
+
+/* ===================== START ===================== */
+buildBoard(); render(); showSetup();
+</script>
+</body>
+</html>
