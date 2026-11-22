@@ -25,6 +25,8 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;b
 .tb .price{opacity:.7;font-size:.92em}
 .corner .tb .icon{font-size:2.6em}
 .corner .tb .name{font-size:1.05em}
+.tile.home{background:linear-gradient(145deg,#3b82f6,#1d4ed8);color:#fff}
+.tile.home .tb .name{font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.35)}
 .mort .tb{opacity:.45;background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.08) 4px 8px)}
 .tokens{position:absolute;left:0;right:0;bottom:1px;display:flex;flex-wrap:wrap;justify-content:center;gap:1px;pointer-events:none}
 .tok{width:calc(var(--tile)*0.4);height:calc(var(--tile)*0.4);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--tile)*0.24);background:#fff;border:2px solid;box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -115,7 +117,7 @@ const GROUPS = {
   dblue:  {name:'Dark Blue',  color:'#1d4ed8', house:200}
 };
 const SPACES = [
-  {type:'go', name:'Welcome to Rockland', short:'GO!', icon:'🏁', flavor:'Collect $200 every time you pass.'},
+  {type:'go', name:'Our Home', short:'Our Home', icon:'🏡', flavor:'Home sweet home. Collect $200 every time you pass.'},
   {type:'prop', name:'Hillburn', group:'brown', price:60, rent:[2,10,30,90,160,250], flavor:'Tiny village at the foot of the Ramapo Mountains.'},
   {type:'chest', name:'Town Hall', icon:'🏛️'},
   {type:'prop', name:'Sloatsburg', group:'brown', price:60, rent:[4,20,60,180,320,450], flavor:'Gateway to Harriman State Park.'},
@@ -145,7 +147,7 @@ const SPACES = [
   {type:'prop', name:'Sparkill', group:'yellow', price:260, rent:[22,110,330,800,975,1150], flavor:'Small creekside hamlet near the river.'},
   {type:'util', name:'Rockland Water', short:'Rockland Water', icon:'💧', price:150, flavor:'Water for every faucet from Nyack to Suffern.'},
   {type:'prop', name:'West Nyack', group:'yellow', price:280, rent:[24,120,360,850,1025,1200], flavor:'Home of the Palisades Center mall.'},
-  {type:'gotojail', name:'Busted on the Palisades Parkway', short:'Go to Jail', icon:'👮', flavor:'Go directly to jail. Do not pass GO.'},
+  {type:'gotojail', name:'Busted on the Palisades Parkway', short:'Go to Jail', icon:'👮', flavor:'Go directly to jail. Do not pass Our Home.'},
   {type:'prop', name:'Montebello', group:'green', price:300, rent:[26,130,390,900,1100,1275], flavor:'Upscale village in the Town of Ramapo.'},
   {type:'prop', name:'Grand View-on-Hudson', short:'Grand View', group:'green', price:300, rent:[26,130,390,900,1100,1275], flavor:'Narrow riverside village with sweeping Hudson views.'},
   {type:'chest', name:'Town Hall', icon:'🏛️'},
@@ -160,7 +162,7 @@ const RAILS=[5,15,25,35], UTILS=[12,28];
 
 /* ===================== CARDS ===================== */
 const CHANCE = [
-  {text:'Advance to Welcome to Rockland (GO). Collect $200.', act:p=>go(p,0)},
+  {text:'Head back to Our Home. Collect $200.', act:p=>go(p,0)},
   {text:'Take the scenic drive up Route 9W. Advance to Nyack.', act:p=>go(p,39)},
   {text:'Catch a show at the Lafayette Theatre. Advance to Suffern.', act:p=>go(p,23)},
   {text:'Jury duty! Advance to New City.', act:p=>go(p,24)},
@@ -178,7 +180,7 @@ const CHANCE = [
   {text:'Your home renovation loan comes through. Collect $150.', act:p=>{p.money+=150;}}
 ];
 const CHEST = [
-  {text:'Advance to Welcome to Rockland (GO). Collect $200.', act:p=>go(p,0)},
+  {text:'Time to go home! Advance to Our Home. Collect $200.', act:p=>go(p,0)},
   {text:'Property tax overpayment refunded. Collect $20.', act:p=>{p.money+=20;}},
   {text:'Urgent care visit in Nanuet. Pay $50.', act:p=>{charge(p,50,-1);}},
   {text:'Sold antiques at a Piermont yard sale. Collect $50.', act:p=>{p.money+=50;}},
@@ -251,13 +253,13 @@ async function walk(p,n){
   const delay=p.ai?90:130;
   for(let k=0;k<n;k++){
     p.pos=(p.pos+1)%40;
-    if(p.pos===0){ p.money+=200; log(`${p.name} passed Welcome to Rockland and collects $200.`); }
+    if(p.pos===0){ p.money+=200; log(`${p.name} passed Our Home and collects $200.`); }
     render(); await sleep(delay);
   }
   busy=false;
 }
 function moveTo(p,idx){
-  if(idx<p.pos){ p.money+=200; log(`${p.name} passed Welcome to Rockland and collects $200.`); }
+  if(idx<p.pos){ p.money+=200; log(`${p.name} passed Our Home and collects $200.`); }
   p.pos=idx;
 }
 function go(p,idx,opts){ moveTo(p,idx); land(opts); return true; }
@@ -317,7 +319,7 @@ function land(opts={}){
     case 'gotojail': S.msg=`Busted on the Palisades Parkway! ${p.name} goes to jail.`; log(S.msg); sendToJail(p); break;
     case 'parking': S.msg=`${p.name} grabbed free parking at the Palisades Center.`; break;
     case 'jail': S.msg=`${p.name} is just visiting the jail.`; break;
-    case 'go': S.msg=`${p.name} landed on Welcome to Rockland.`; break;
+    case 'go': S.msg=`${p.name} is back at Our Home.`; break;
   }
   finish();
 }
@@ -556,7 +558,7 @@ function buildBoard(){
   const b=document.getElementById('board'); b.innerHTML='';
   SPACES.forEach((s,i)=>{
     const d=document.createElement('div'); const [r,c]=gridPos(i); const side=sideOf(i);
-    d.className='tile'+(side?' side-'+side:' corner'); d.id='t'+i;
+    d.className='tile'+(side?' side-'+side:' corner')+(i===0?' home':''); d.id='t'+i;
     d.style.gridRow=r; d.style.gridColumn=c; d.onclick=()=>showSpace(i);
     b.appendChild(d);
   });
@@ -693,7 +695,7 @@ function calcRentPreview(i){ const s=SPACES[i],o=S.own[i]; return o.houses?s.ren
 function showRules(){
   openModal(`<h2>How to play</h2>
   <p><b>Goal:</b> be the last player standing (or the richest when you end the game).</p>
-  <p>🎲 <b>Roll</b> and move around Rockland County. Pass <b>Welcome to Rockland</b> to collect $200.</p>
+  <p>🎲 <b>Roll</b> and move around Rockland County. Pass <b>Our Home</b> to collect $200.</p>
   <p>🏡 <b>Land on an unowned town, transit line or utility</b> to buy it. If someone else owns it, you pay them rent.</p>
   <p>🎨 <b>Own a whole color set</b> to double the rent and start building houses (up to 4, then a hotel). Build evenly across the set.</p>
   <p>🚆 <b>Transit lines:</b> rent goes up with each one you own. 💡 <b>Utilities:</b> rent is based on the dice.</p>
