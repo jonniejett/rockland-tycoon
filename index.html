@@ -23,10 +23,9 @@ body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;b
 .tb .name{font-weight:650;overflow-wrap:anywhere}
 .tb .icon{font-size:1.6em;line-height:1}
 .tb .price{opacity:.7;font-size:.92em}
-.corner .tb .icon{font-size:2.6em}
+.corner .tb .icon{font-size:2.1em}
 .corner .tb .name{font-size:1.05em}
-.tile.home{background:linear-gradient(145deg,#3b82f6,#1d4ed8);color:#fff}
-.tile.home .tb .name{font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.tile.home .tb .name{font-weight:800;color:#1d4ed8}
 .mort .tb{opacity:.45;background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.08) 4px 8px)}
 .tokens{position:absolute;left:0;right:0;bottom:1px;display:flex;flex-wrap:wrap;justify-content:center;gap:1px;pointer-events:none}
 .tok{width:calc(var(--tile)*0.4);height:calc(var(--tile)*0.4);border-radius:50%;display:grid;place-items:center;font-size:calc(var(--tile)*0.24);background:#fff;border:2px solid;box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -117,7 +116,7 @@ const GROUPS = {
   dblue:  {name:'Dark Blue',  color:'#1d4ed8', house:200}
 };
 const SPACES = [
-  {type:'go', name:'Our Home', short:'Our Home', icon:'🏡', flavor:'Home sweet home. Collect $200 every time you pass.'},
+  {type:'go', name:'Our Home', short:'Our Home', icon:"<svg width='1em' height='1em' viewBox='0 0 32 32' aria-hidden='true' style='vertical-align:-.12em'><path d='M16 3 L30 15 L26 15 L26 29 L6 29 L6 15 L2 15 Z' fill='#2563eb'/><path d='M16 3 L30 15 L26.5 15 L16 6 L5.5 15 L2 15 Z' fill='#1e3a8a'/><rect x='13' y='19' width='6' height='10' rx='1' fill='#fff'/><rect x='8.5' y='17' width='4' height='4' fill='#dbeafe'/><rect x='19.5' y='17' width='4' height='4' fill='#dbeafe'/><rect x='21' y='5' width='3' height='6' fill='#1e3a8a'/></svg>", flavor:'Home sweet home. Collect $200 every time you pass.'},
   {type:'prop', name:'Hillburn', group:'brown', price:60, rent:[2,10,30,90,160,250], flavor:'Tiny village at the foot of the Ramapo Mountains.'},
   {type:'chest', name:'Town Hall', icon:'🏛️'},
   {type:'prop', name:'Sloatsburg', group:'brown', price:60, rent:[4,20,60,180,320,450], flavor:'Gateway to Harriman State Park.'},
@@ -137,7 +136,7 @@ const SPACES = [
   {type:'chest', name:'Town Hall', icon:'🏛️'},
   {type:'prop', name:'Tappan', group:'orange', price:180, rent:[14,70,200,550,750,950], flavor:'Historic ’76 House and George Washington’s headquarters.'},
   {type:'prop', name:'Nanuet', group:'orange', price:200, rent:[16,80,220,600,800,1000], flavor:'Shopping central along Route 59.'},
-  {type:'parking', name:'Palisades Center Free Parking', short:'Free Parking', icon:'🛍️', flavor:'Take a break at the mall. Nothing happens here.'},
+  {type:'parking', name:'Old Village Inn', short:'Old Village Inn', icon:'🍺', flavor:'Pull up a stool and relax. Nothing happens here.'},
   {type:'prop', name:'Pearl River', group:'red', price:220, rent:[18,90,250,700,875,1050], flavor:'Known for its big St. Patrick’s Day parade.'},
   {type:'chance', name:'Rockland Adventure', short:'Adventure', icon:'🧭'},
   {type:'prop', name:'Suffern', group:'red', price:220, rent:[18,90,250,700,875,1050], flavor:'Home of the Lafayette Theatre.'},
@@ -317,7 +316,7 @@ function land(opts={}){
     case 'tax': S.msg=`${s.name}! ${p.name} pays ${$m(s.amount)}.`; log(S.msg); charge(p,s.amount,-1); break;
     case 'chance': case 'chest': drawCard(s.type); return;
     case 'gotojail': S.msg=`Busted on the Palisades Parkway! ${p.name} goes to jail.`; log(S.msg); sendToJail(p); break;
-    case 'parking': S.msg=`${p.name} grabbed free parking at the Palisades Center.`; break;
+    case 'parking': S.msg=`${p.name} stopped in at the Old Village Inn. Relax!`; break;
     case 'jail': S.msg=`${p.name} is just visiting the jail.`; break;
     case 'go': S.msg=`${p.name} is back at Our Home.`; break;
   }
