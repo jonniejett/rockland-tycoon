@@ -197,7 +197,12 @@ const CHEST = [
 ];
 
 /* ===================== STATE ===================== */
-const TOKENS=['🚗','⛵','🍎','🥾'];
+// Rockland-themed game pieces. The first four are the defaults.
+const TOKEN_CHOICES=[
+  {e:'🚓',n:'Police car'},{e:'🚒',n:'Fire truck'},{e:'⛵',n:'Hudson sailboat'},{e:'🦌',n:'Deer'},
+  {e:'🍎',n:'Orchard apple'},{e:'🥾',n:'Hiking boot'},{e:'🚂',n:'Erie train'},{e:'🍀',n:'Pearl River shamrock'}
+];
+const TOKENS=TOKEN_CHOICES.map(t=>t.e);
 const PCOLORS=['#e11d48','#2563eb','#16a34a','#f59e0b'];
 const SAVE_KEY='rocklandTycoon.v1';
 let S=null, busy=false, aiTimer=null, manageFor=null;
@@ -223,7 +228,7 @@ function netWorth(pi){
 function newGame(cfg){
   clearTimeout(aiTimer); busy=false;
   S={
-    players:cfg.map((c,i)=>({name:c.name,ai:c.ai,token:TOKENS[i],color:PCOLORS[i],money:1500,pos:0,inJail:false,jailTurns:0,jailCards:0,bankrupt:false})),
+    players:cfg.map((c,i)=>({name:c.name,ai:c.ai,token:c.token||TOKENS[i],color:PCOLORS[i],money:1500,pos:0,inJail:false,jailTurns:0,jailCards:0,bankrupt:false})),
     own:SPACES.map(s=>buyable(s)?{owner:-1,houses:0,mort:false}:null),
     turn:0, phase:'roll', dice:[1,1], doubles:0, extraRoll:false, debts:[], log:[], msg:'', card:null,
     decks:{chance:shuffle(CHANCE.map((_,i)=>i)), chest:shuffle(CHEST.map((_,i)=>i))},
@@ -704,14 +709,14 @@ function showSetup(){
   const saved=loadSaved();
   let rows='';
   for(let i=0;i<4;i++){
-    rows+=`<div class="setup-row" id="row${i}"><span style="font-size:22px">${TOKENS[i]}</span>
+    rows+=`<div class="setup-row" id="row${i}"><select id="tk${i}" aria-label="Game piece" style="font-size:20px;padding:4px">${TOKEN_CHOICES.map((t,j)=>`<option value="${t.e}" ${j===i?'selected':''}>${t.e}</option>`).join('')}</select>
       <input id="nm${i}" value="${i===0?'You':['','Mohegan','Hook','Tappan'][i]+' Bot'}" maxlength="16">
       <select id="ai${i}"><option value="0" ${i===0?'selected':''}>Human</option><option value="1" ${i>0?'selected':''}>Computer</option></select></div>`;
   }
   openModal(`<h2>🏁 New game</h2><p>Buy up Rockland County, from Hillburn to Nyack!</p>
   <label>Number of players: <select id="np" onchange="setupRows()"><option>2</option><option>3</option><option selected>4</option></select></label>
   <div style="margin-top:8px">${rows}</div>
-  <p style="font-size:12.5px;opacity:.75">Set more than one player to Human to pass the device around with friends.</p>
+  <p style="font-size:12.5px;opacity:.75">Pick a game piece: 🚓 police car, 🚒 fire truck, ⛵ Hudson sailboat, 🦌 deer, 🍎 orchard apple, 🥾 hiking boot, 🚂 Erie train or 🍀 Pearl River shamrock.<br>Set more than one player to Human to pass the device around with friends.</p>
   <div class="actions" style="justify-content:flex-end">
     ${saved&&saved.phase!=='over'?`<button class="btn alt" onclick="continueSaved()">Continue saved game</button>`:''}
     <button class="btn" onclick="startFromSetup()">Start game</button></div>`);
@@ -720,7 +725,13 @@ function showSetup(){
 function setupRows(){ const n=+document.getElementById('np').value; for(let i=0;i<4;i++) document.getElementById('row'+i).style.display=i<n?'flex':'none'; }
 function startFromSetup(){
   const n=+document.getElementById('np').value, cfg=[];
-  for(let i=0;i<n;i++) cfg.push({name:(document.getElementById('nm'+i).value.trim()||`Player ${i+1}`).slice(0,16), ai:document.getElementById('ai'+i).value==='1'});
+  const used=new Set();
+  for(let i=0;i<n;i++){
+    let tk=document.getElementById('tk'+i).value;
+    if(used.has(tk)) tk=TOKENS.find(t=>!used.has(t)); // no two players share a piece
+    used.add(tk);
+    cfg.push({name:(document.getElementById('nm'+i).value.trim()||`Player ${i+1}`).slice(0,16), ai:document.getElementById('ai'+i).value==='1', token:tk});
+  }
   closeModal(); newGame(cfg);
 }
 
